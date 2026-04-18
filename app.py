@@ -127,11 +127,18 @@ if mode == "Chat Assistant":
         if user_input_clean in ["hi", "hello", "hey"]:
             answer = "👋 Hello! Ask me anything about placements."
 
+        # TOO SHORT
         elif len(user_input_clean) < 3:
             answer = "❗ Please enter a meaningful question."
 
+        # RANDOM / INVALID INPUT FILTER
+        elif not any(word in user_input_clean for word in [
+            "interview", "process", "prepare", "question", "resume", "job", "placement"
+        ]):
+            answer = "❗ Please ask a placement-related question (interview, resume, preparation, etc)."
+
         else:
-            # 🔥 INTENT DETECTION (FIXED)
+            # INTENT DETECTION
             if "resume" in user_input_clean:
                 intent = "resume feedback"
             elif "question" in user_input_clean:
@@ -147,11 +154,14 @@ if mode == "Chat Assistant":
             retriever = db.as_retriever(search_kwargs={"k":3})
 
             query = f"{company} {intent} {user_input}"
-            docs = retriever.invoke(query)
 
-            context = "\n\n".join([doc.page_content for doc in docs])
+            try:
+                docs = retriever.invoke(query)
+                context = "\n\n".join([doc.page_content for doc in docs])
+            except:
+                context = ""
 
-            # 🔥 RESUME HANDLING
+            # RESUME HANDLING
             resume_text = ""
             if uploaded_file:
                 resume_text = extract_text(uploaded_file)
@@ -172,15 +182,18 @@ if mode == "Chat Assistant":
                     question=query
                 )
 
-                with st.spinner("🤖 Thinking..."):
-                    response = llm.invoke(final_prompt)
+                try:
+                    with st.spinner("🤖 Thinking..."):
+                        response = llm.invoke(final_prompt)
+                    answer = response.content
+                except:
+                    answer = "⚠️ Something went wrong. Please try again."
 
-                answer = response.content
-
-                # SHOW SOURCES
-                with st.expander("📚 Sources Used"):
-                    for doc in docs:
-                        st.write(doc.metadata.get("source", "Unknown"))
+                # SOURCES
+                if context:
+                    with st.expander("📚 Sources Used"):
+                        for doc in docs:
+                            st.write(doc.metadata.get("source", "Unknown"))
 
         # SAVE CHAT
         st.session_state.chat_history.append({
@@ -234,11 +247,13 @@ if mode == "Mock Interview":
             - Improvements
             """
 
-            with st.spinner("📊 Evaluating..."):
-                feedback = llm.invoke(eval_prompt)
-
-            st.markdown("### 📊 Feedback")
-            st.markdown(feedback.content)
+            try:
+                with st.spinner("📊 Evaluating..."):
+                    feedback = llm.invoke(eval_prompt)
+                st.markdown("### 📊 Feedback")
+                st.markdown(feedback.content)
+            except:
+                st.error("⚠️ Evaluation failed. Try again.")
 
 # ---------------- FOOTER ---------------- #
 st.markdown("---")
