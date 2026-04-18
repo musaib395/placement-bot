@@ -131,11 +131,11 @@ if mode == "Chat Assistant":
             answer = "❗ Please enter a meaningful question."
 
         else:
-            # INTENT DETECTION
+            # 🔥 INTENT DETECTION (FIXED)
             if "resume" in user_input_clean:
                 intent = "resume feedback"
             elif "question" in user_input_clean:
-                intent = "generate interview questions"
+                intent = "technical interview questions"
             elif "prepare" in user_input_clean:
                 intent = "preparation tips"
             elif "process" in user_input_clean:
@@ -151,7 +151,7 @@ if mode == "Chat Assistant":
 
             context = "\n\n".join([doc.page_content for doc in docs])
 
-            # 🔥 RESUME FIX (IMPORTANT)
+            # 🔥 RESUME HANDLING
             resume_text = ""
             if uploaded_file:
                 resume_text = extract_text(uploaded_file)
@@ -177,11 +177,12 @@ if mode == "Chat Assistant":
 
                 answer = response.content
 
-                # SOURCES
+                # SHOW SOURCES
                 with st.expander("📚 Sources Used"):
                     for doc in docs:
                         st.write(doc.metadata.get("source", "Unknown"))
 
+        # SAVE CHAT
         st.session_state.chat_history.append({
             "question": user_input,
             "answer": answer
