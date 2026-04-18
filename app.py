@@ -11,7 +11,7 @@ from pypdf import PdfReader
 
 load_dotenv()
 
-# API KEY CHECK
+# ---------------- API KEY ---------------- #
 if not os.getenv("GROQ_API_KEY"):
     st.error("❌ GROQ_API_KEY not found")
     st.stop()
@@ -36,6 +36,9 @@ st.markdown("""
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
 
+if "resume_text" not in st.session_state:
+    st.session_state.resume_text = ""
+
 if "interview_question" not in st.session_state:
     st.session_state.interview_question = None
 
@@ -55,7 +58,7 @@ cgpa = st.sidebar.slider("CGPA", 0.0, 10.0, 7.0)
 skills = st.sidebar.text_input("Skills", "Python, SQL")
 branch = st.sidebar.selectbox("Branch", ["CSE","IT","ECE","EEE","Mechanical"])
 
-# Career Suggestions
+# Suggestions
 if st.sidebar.button("🎯 Get Suggestions"):
     llm = ChatGroq(
         groq_api_key=os.getenv("GROQ_API_KEY"),
@@ -96,6 +99,12 @@ def extract_text(file):
     reader = PdfReader(file)
     return "".join([page.extract_text() or "" for page in reader.pages])
 
+# ---------------- STORE RESUME (FIXED) ---------------- #
+if uploaded_file:
+    st.session_state.resume_text = extract_text(uploaded_file)
+
+resume_text = st.session_state.resume_text
+
 # ---------------- LOAD DB ---------------- #
 @st.cache_resource
 def load_db():
@@ -108,7 +117,7 @@ def load_db():
         allow_dangerous_deserialization=True
     )
 
-# ---------------- SHOW CHAT ---------------- #
+# ---------------- CHAT DISPLAY ---------------- #
 for chat in st.session_state.chat_history:
     with st.chat_message("user"):
         st.markdown(chat["question"])
@@ -127,12 +136,12 @@ if mode == "Chat Assistant":
         if user_input_clean in ["hi", "hello", "hey"]:
             answer = "👋 Hello! Ask me anything about placements."
 
-        # TOO SHORT
+        # SHORT INPUT
         elif len(user_input_clean.split()) < 2:
             answer = "❗ Please ask a proper placement-related question."
 
         else:
-            # 🔥 IMPROVED INTENT DETECTION
+            # 🔥 INTENT DETECTION
             if any(word in user_input_clean for word in ["resume", "cv"]):
                 intent = "resume feedback"
 
@@ -151,7 +160,7 @@ if mode == "Chat Assistant":
             db = load_db()
             retriever = db.as_retriever(search_kwargs={"k":3})
 
-            query = f"{company} {intent} {user_input}"
+            query = f"Company: {company}\nIntent: {intent}\nUser Query: {user_input}"
 
             try:
                 docs = retriever.invoke(query)
@@ -159,11 +168,7 @@ if mode == "Chat Assistant":
             except:
                 context = ""
 
-            # 🔥 RESUME HANDLING FIXED
-            resume_text = ""
-            if uploaded_file:
-                resume_text = extract_text(uploaded_file)
-
+            # 🔥 RESUME LOGIC FIXED
             if intent == "resume feedback" and not resume_text:
                 answer = "❗ Please upload your resume first."
 
