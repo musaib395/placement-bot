@@ -128,25 +128,23 @@ if mode == "Chat Assistant":
             answer = "👋 Hello! Ask me anything about placements."
 
         # TOO SHORT
-        elif len(user_input_clean) < 3:
-            answer = "❗ Please enter a meaningful question."
-
-        # RANDOM / INVALID INPUT FILTER
-        elif not any(word in user_input_clean for word in [
-            "interview", "process", "prepare", "question", "resume", "job", "placement"
-        ]):
-            answer = "❗ Please ask a placement-related question (interview, resume, preparation, etc)."
+        elif len(user_input_clean.split()) < 2:
+            answer = "❗ Please ask a proper placement-related question."
 
         else:
-            # INTENT DETECTION
-            if "resume" in user_input_clean:
+            # 🔥 IMPROVED INTENT DETECTION
+            if any(word in user_input_clean for word in ["resume", "cv"]):
                 intent = "resume feedback"
-            elif "question" in user_input_clean:
+
+            elif any(word in user_input_clean for word in ["technical question", "questions", "ask me"]):
                 intent = "technical interview questions"
-            elif "prepare" in user_input_clean:
+
+            elif any(word in user_input_clean for word in ["prepare", "preparation"]):
                 intent = "preparation tips"
-            elif "process" in user_input_clean:
+
+            elif any(word in user_input_clean for word in ["process", "round"]):
                 intent = "interview process"
+
             else:
                 intent = "placement guidance"
 
@@ -161,16 +159,17 @@ if mode == "Chat Assistant":
             except:
                 context = ""
 
-            # RESUME HANDLING
+            # 🔥 RESUME HANDLING FIXED
             resume_text = ""
             if uploaded_file:
                 resume_text = extract_text(uploaded_file)
 
-            if "resume" in intent and not resume_text:
+            if intent == "resume feedback" and not resume_text:
                 answer = "❗ Please upload your resume first."
+
             else:
                 if resume_text:
-                    query = query + "\n\nResume:\n" + resume_text
+                    query += "\n\nResume:\n" + resume_text
 
                 llm = ChatGroq(
                     groq_api_key=os.getenv("GROQ_API_KEY"),
