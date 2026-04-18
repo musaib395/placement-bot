@@ -82,6 +82,7 @@ st.markdown("### 💡 Try asking:")
 st.write("- TCS interview process")
 st.write("- How to prepare for Infosys")
 st.write("- Ask me technical questions")
+st.write("- Give resume feedback")
 
 # ---------------- INPUT ---------------- #
 company = st.selectbox("Select Company",
@@ -126,13 +127,14 @@ if mode == "Chat Assistant":
         if user_input_clean in ["hi", "hello", "hey"]:
             answer = "👋 Hello! Ask me anything about placements."
 
-        # VERY SHORT INPUT
         elif len(user_input_clean) < 3:
             answer = "❗ Please enter a meaningful question."
 
         else:
             # INTENT DETECTION
-            if "question" in user_input_clean:
+            if "resume" in user_input_clean:
+                intent = "resume feedback"
+            elif "question" in user_input_clean:
                 intent = "generate interview questions"
             elif "prepare" in user_input_clean:
                 intent = "preparation tips"
@@ -149,27 +151,37 @@ if mode == "Chat Assistant":
 
             context = "\n\n".join([doc.page_content for doc in docs])
 
-            llm = ChatGroq(
-                groq_api_key=os.getenv("GROQ_API_KEY"),
-                model_name="llama-3.1-8b-instant"
-            )
+            # 🔥 RESUME FIX (IMPORTANT)
+            resume_text = ""
+            if uploaded_file:
+                resume_text = extract_text(uploaded_file)
 
-            final_prompt = placement_prompt.format(
-                context=context,
-                question=query
-            )
+            if "resume" in intent and not resume_text:
+                answer = "❗ Please upload your resume first."
+            else:
+                if resume_text:
+                    query = query + "\n\nResume:\n" + resume_text
 
-            with st.spinner("🤖 Thinking..."):
-                response = llm.invoke(final_prompt)
+                llm = ChatGroq(
+                    groq_api_key=os.getenv("GROQ_API_KEY"),
+                    model_name="llama-3.1-8b-instant"
+                )
 
-            answer = response.content
+                final_prompt = placement_prompt.format(
+                    context=context,
+                    question=query
+                )
 
-            # SOURCES
-            with st.expander("📚 Sources Used"):
-                for doc in docs:
-                    st.write(doc.metadata.get("source", "Unknown"))
+                with st.spinner("🤖 Thinking..."):
+                    response = llm.invoke(final_prompt)
 
-        # SAVE CHAT
+                answer = response.content
+
+                # SOURCES
+                with st.expander("📚 Sources Used"):
+                    for doc in docs:
+                        st.write(doc.metadata.get("source", "Unknown"))
+
         st.session_state.chat_history.append({
             "question": user_input,
             "answer": answer
